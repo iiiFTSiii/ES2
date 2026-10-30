@@ -20,7 +20,7 @@ export class VacanciesPage {
     this.resetButton = page.getByRole('button', { name: 'Reset' });
     this.tableHeader = page.locator('.oxd-table-header');
     this.tableRows = page.locator('.oxd-table-body .oxd-table-row');
-    this.noRecordsMessage = page.getByText('No Records Found');
+    this.noRecordsMessage = page.locator('.orangehrm-paper-container').getByText('No Records Found');
     this.deleteDialog = page.locator('.oxd-dialog-sheet');
   }
 
@@ -31,12 +31,21 @@ export class VacanciesPage {
   async goto(): Promise<void> {
     const url = '/web/index.php/recruitment/viewJobVacancy';
     for (let attempt = 1; attempt <= 3; attempt++) {
+      const filtersLoaded = this.page
+        .waitForResponse(
+          (response) => response.url().includes('/api/v2/recruitment/vacancies?model=summary'),
+          { timeout: 5_000 },
+        )
+        .catch(() => null);
       await this.page.goto(url, { waitUntil: 'domcontentloaded' });
       const loaded = await this.tableHeader
         .waitFor({ state: 'visible', timeout: attempt < 3 ? 10_000 : 30_000 })
         .then(() => true)
         .catch(() => false);
-      if (loaded) return;
+      if (loaded) {
+        await filtersLoaded;
+        return;
+      }
     }
     throw new Error('Não foi possível carregar a lista de vacancies');
   }
@@ -149,8 +158,16 @@ export class VacanciesPage {
 
   async openEdit(name: string): Promise<void> {
     const row = await this.expectRow(name);
+    const vacancyLoaded = this.page.waitForResponse(
+      (response) =>
+        response.request().method() === 'GET' &&
+        /\/api\/v2\/recruitment\/vacancies\/\d+$/.test(response.url()),
+      { timeout: 20_000 },
+    );
     await row.locator('button:has(.bi-pencil-fill)').click();
     await this.page.waitForURL(/addJobVacancy\/\d+/);
+    await vacancyLoaded;
+    await this.page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => {});
     await new VacancyFormPage(this.page).expectName(name);
   }
 
