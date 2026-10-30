@@ -92,6 +92,9 @@ As credenciais podem ser sobrescritas pelas variáveis de ambiente
   (`ES2-...`) e remove os registros no `afterEach`.
 - Job Title e Hiring Manager são selecionados dinamicamente entre as opções
   disponíveis no demo, evitando dependência de dados fixos.
+- O setup confirma o acesso ao módulo Recruitment e repete o login caso o demo
+  esteja em uma janela instável; a navegação para a lista também tolera
+  recarregamentos.
 - A suíte roda com um worker para reduzir interferência entre testes em um
   ambiente compartilhado.
 
